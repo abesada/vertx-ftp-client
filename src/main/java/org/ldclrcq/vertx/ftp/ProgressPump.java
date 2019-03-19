@@ -1,4 +1,4 @@
-package io.github.bckfnn.ftp;
+package org.ldclrcq.vertx.ftp;
 
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;

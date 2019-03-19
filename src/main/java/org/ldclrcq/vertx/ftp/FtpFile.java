@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.github.bckfnn.ftp;
+package org.ldclrcq.vertx.ftp;
 
 import java.io.File;
 import java.util.ArrayList;

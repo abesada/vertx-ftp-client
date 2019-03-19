@@ -24,6 +24,8 @@ import org.junit.Test;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.file.OpenOptions;
+import org.ldclrcq.vertx.ftp.FtpClient;
+import org.ldclrcq.vertx.ftp.FtpFile;
 
 public class FtpClientTele2Test {
     static Vertx vertx;

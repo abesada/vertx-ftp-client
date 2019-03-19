@@ -17,4 +17,4 @@
 /**
  * A simple ftp client for vertx.
  */
-package io.github.bckfnn.ftp;
+package org.ldclrcq.vertx.ftp;

@@ -1,4 +1,4 @@
-package io.github.bckfnn.ftp;
+package org.ldclrcq.vertx.ftp;
 
 public class Progress {
     private FtpClient client;
