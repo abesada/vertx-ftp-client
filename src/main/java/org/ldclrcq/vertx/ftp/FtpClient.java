@@ -219,6 +219,34 @@ public class FtpClient {
     }
 
     /**
+     * Starts the renaming scenario by telling the FTP server the path to be renamed
+     * (must be followed by a rnto command)
+     *
+     * @param path    the path of the path to rename
+     * @param handler callback handler that is called when the rename is completed
+     */
+    public void rnfr(String path, Handler<AsyncResult<Void>> handler) {
+        write("RNFR " + path, resp(handler,
+                when("350", rnfr -> handler.handle(Future.succeededFuture()))
+        ));
+    }
+
+    /**
+     * Ends the renaming scenario by telling the FTP server the new path
+     * (must be preceded by a rnfr command)
+     *
+     *
+     *
+     * @param path
+     * @param handler
+     */
+    public void rnto(String path, Handler<AsyncResult<Void>> handler) {
+        write("RNTO " + path, resp(handler,
+                when("250", rnto -> handler.handle(Future.succeededFuture()))
+        ));
+    }
+
+    /**
      * Creates a new directory at the specified path
      *
      * @param newDirectoryPath the new directory path
