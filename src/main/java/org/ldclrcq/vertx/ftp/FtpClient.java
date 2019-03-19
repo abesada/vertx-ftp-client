@@ -53,11 +53,11 @@ public class FtpClient {
     private Handler<AsyncResult<Response>> next;
 
     /**
-     * Create a ftp client which connects to the specified host and port.
+     * Creates a FTP client which connects to the specified host and port.
      *
-     * @param vertx the vertx instance to use for creating connections.
+     * @param vertx the Vert.x instance to use when creating connections.
      * @param host  the host where the FTP server is running.
-     * @param port  the port on the FTP server.
+     * @param port  the port where the FTP server is listening.
      */
     public FtpClient(Vertx vertx, String host, int port) {
         this.vertx = vertx;
@@ -66,7 +66,7 @@ public class FtpClient {
     }
 
     /**
-     * Connect to the server.
+     * Connects to the FTP server.
      *
      * @param handler callback handler that is called when the connection is completed.
      */
@@ -88,19 +88,19 @@ public class FtpClient {
     /**
      * Perform a login on the FTP server using the specified user name and password.
      *
-     * @param user    the user name
-     * @param passwd  the password
-     * @param handler callback handler that is called when the login is completed.
+     * @param user     the username
+     * @param password the password
+     * @param handler  callback handler that is called when the login is completed.
      */
-    public void login(String user, String passwd, Handler<AsyncResult<Void>> handler) {
+    public void login(String user, String password, Handler<AsyncResult<Void>> handler) {
         write("USER " + user, resp(handler,
                 when("230", u -> handler.handle(Future.succeededFuture())),
-                when("331", "332", u -> write("PASS " + passwd, resp(handler,
+                when("331", "332", u -> write("PASS " + password, resp(handler,
                         when("230", "202", p -> handler.handle(Future.succeededFuture())))))));
     }
 
     /**
-     * Perform a list file and directories of the current working directory.
+     * Perform a listing of files and directories in the current working directory.
      *
      * @param handler callback handler that is called when the list is completed.
      */
@@ -109,10 +109,10 @@ public class FtpClient {
     }
 
     /**
-     * Perform a list of the file or directories specifed by path.
+     * Perform a listing of the files or directories in the specified directory
      *
      * @param path    the path to list.
-     * @param handler callback handler that is called when the list is completed.
+     * @param handler callback handler that is called when the listing is completed.
      */
     public void list(String path, Handler<AsyncResult<Buffer>> handler) {
         Buffer data = Buffer.buffer();
@@ -123,14 +123,14 @@ public class FtpClient {
     }
 
     /**
-     * Perform a retrive (download)  of the file by path.
+     * Perform a retrieve (download) of the file at the specified path.
      *
-     * @param path      the path to list.
-     * @param localFile an asyncFile where the download file will be written
-     * @param progress  a progress handler that is called for each part that is recieved.
-     * @param handler   callback handler that is called when the list is completed.
+     * @param path              the path of the file to retrieve
+     * @param destinationBuffer a buffer where the retrieved file will be written
+     * @param progress          a progress handler that is called for each part that is received
+     * @param handler           callback handler that is called when the download is completed.
      */
-    public void retr(String path, WriteStream<Buffer> localFile, Handler<Progress> progress, Handler<AsyncResult<Void>> handler) {
+    public void retr(String path, WriteStream<Buffer> destinationBuffer, Handler<Progress> progress, Handler<AsyncResult<Void>> handler) {
         AtomicInteger ends = new AtomicInteger(0);
         pasv(handler, datasocket -> {
             datasocket.endHandler($ -> {
@@ -138,7 +138,7 @@ public class FtpClient {
                     handler.handle(Future.succeededFuture());
                 }
             });
-            new ProgressPump(datasocket, localFile, pumped -> progress.handle(new Progress(this, pumped))).start();
+            new ProgressPump(datasocket, destinationBuffer, pumped -> progress.handle(new Progress(this, pumped))).start();
         }, $ -> write("RETR " + path, resp(handler,
                 when("125", "150", retr -> handle(resp(handler,
                         when("226", "250", listdone -> {
@@ -149,11 +149,11 @@ public class FtpClient {
     }
 
     /**
-     * Perform a store (upload) to the file of path.
+     * Uploads a file to the specified path
      *
      * @param path      the path to upload to.
      * @param localFile an asyncFile where the download file will be written
-     * @param progress  a progress handler that is called for each part that is recieved.
+     * @param progress  a progress handler that is called for each part that is received.
      * @param handler   callback handler that is called when the list is completed.
      */
     public void stor(String path, ReadStream<Buffer> localFile, Handler<Progress> progress, Handler<AsyncResult<Void>> handler) {
@@ -176,10 +176,10 @@ public class FtpClient {
     }
 
     /**
-     * Perform a delete on the server.
+     * Deletes a file at the specified path
      *
-     * @param path    the path to upload to.
-     * @param handler callback handler that is called when the list is completed.
+     * @param path    the path where to perform a delete
+     * @param handler callback handler that is called when the delete is completed.
      */
     public void dele(String path, Handler<AsyncResult<Void>> handler) {
         write("DELE " + path, resp(handler,
@@ -187,31 +187,53 @@ public class FtpClient {
     }
 
     /**
-     * Perform a change directory on the server.
+     * Changes the current directory on the FTP server
      *
-     * @param dir     the directory to change into.
-     * @param handler callback handler that is called when the list is completed.
+     * @param newDirectory the directory to change into.
+     * @param handler      callback handler that is called when the directory change is completed.
      */
-    public void cwd(String dir, Handler<AsyncResult<Void>> handler) {
-        write("CWD " + dir, resp(handler,
+    public void cwd(String newDirectory, Handler<AsyncResult<Void>> handler) {
+        write("CWD " + newDirectory, resp(handler,
                 when("250", pasv -> handler.handle(Future.succeededFuture()))));
     }
 
+    /**
+     * Changes the current directory to the parent directory on the FTP server
+     *
+     * @param handler callback handler that is called when the directory change is completed.
+     */
     public void cdup(Handler<AsyncResult<Void>> handler) {
         write("CDUP", resp(handler,
                 when("200", pasv -> handler.handle(Future.succeededFuture()))));
     }
 
-    public void rmd(String dir, Handler<AsyncResult<Void>> handler) {
-        write("RMD " + dir, resp(handler,
+    /**
+     * Deletes the specified directory
+     *
+     * @param directoryToDelete the path to the directory to delete
+     * @param handler           callback handler that is called when the delete is completed
+     */
+    public void rmd(String directoryToDelete, Handler<AsyncResult<Void>> handler) {
+        write("RMD " + directoryToDelete, resp(handler,
                 when("250", pasv -> handler.handle(Future.succeededFuture()))));
     }
 
-    public void mkd(String dir, Handler<AsyncResult<Void>> handler) {
-        write("MKD " + dir, resp(handler,
+    /**
+     * Creates a new directory at the specified path
+     *
+     * @param newDirectoryPath the new directory path
+     * @param handler          callback handler that is called when the directory creation is completed
+     */
+    public void mkd(String newDirectoryPath, Handler<AsyncResult<Void>> handler) {
+        write("MKD " + newDirectoryPath, resp(handler,
                 when("257", pasv -> handler.handle(Future.succeededFuture()))));
     }
 
+    /**
+     * Disconnects from the FTP server
+     *
+     * @param handler
+     */
     public void quit(Handler<AsyncResult<Void>> handler) {
         write("QUIT", resp(handler,
                 when("200", pasv -> handler.handle(Future.succeededFuture()))));
