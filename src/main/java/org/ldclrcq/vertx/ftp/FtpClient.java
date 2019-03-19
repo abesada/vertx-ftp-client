@@ -41,14 +41,13 @@ import java.util.regex.Pattern;
 public class FtpClient {
     private static Logger log = LoggerFactory.getLogger(FtpClient.class);
 
-    private Vertx vertx;
-    private String host;
-    private int port;
+    private final Vertx vertx;
+    private final String host;
+    private final int port;
     private NetClient client;
     private NetSocket socket;
     private Handler<Void> endHandler = $ -> {
     };
-
     private Response response = null;
     private Handler<AsyncResult<Response>> next;
 
@@ -140,12 +139,7 @@ public class FtpClient {
             });
             new ProgressPump(datasocket, destinationBuffer, pumped -> progress.handle(new Progress(this, pumped))).start();
         }, $ -> write("RETR " + path, resp(handler,
-                when("125", "150", retr -> handle(resp(handler,
-                        when("226", "250", listdone -> {
-                            if (ends.incrementAndGet() == 2) {
-                                handler.handle(Future.succeededFuture());
-                            }
-                        })))))));
+                handlerTransferResult(handler, ends))));
     }
 
     /**
@@ -167,12 +161,7 @@ public class FtpClient {
             });
             new ProgressPump(localFile, datasocket, pumped -> progress.handle(new Progress(this, pumped))).start();
         }, $ -> write("STOR " + path, resp(handler,
-                when("125", "150", retr -> handle(resp(handler,
-                        when("226", "250", listdone -> {
-                            if (ends.incrementAndGet() == 2) {
-                                handler.handle(Future.succeededFuture());
-                            }
-                        })))))));
+                handlerTransferResult(handler, ends))));
     }
 
     /**
@@ -234,8 +223,6 @@ public class FtpClient {
     /**
      * Ends the renaming scenario by telling the FTP server the new path
      * (must be preceded by a rnfr command)
-     *
-     *
      *
      * @param path
      * @param handler
@@ -339,6 +326,14 @@ public class FtpClient {
         throw new RuntimeException("xx");
     }
 
+    private When handlerTransferResult(Handler<AsyncResult<Void>> handler, AtomicInteger ends) {
+        return when("125", "150", retr -> handle(resp(handler,
+                when("226", "250", listdone -> {
+                    if (ends.incrementAndGet() == 2) {
+                        handler.handle(Future.succeededFuture());
+                    }
+                }))));
+    }
 
     public static <R> Handler<AsyncResult<Response>> resp(Handler<AsyncResult<R>> handler, When... whens) {
         return ar -> {
